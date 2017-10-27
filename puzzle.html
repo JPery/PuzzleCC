@@ -80,6 +80,7 @@
             to {bottom: 0; opacity: 0;}
         }
     </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -200,20 +201,13 @@
      * @private
      */
     PuzzleDemo.prototype.loadData_ = function () {
-        var xmlhttpRequest = new XMLHttpRequest;
         var query = 'SELECT ?uri ?label ?geometry_polygon WHERE {?uri a om:Barrio. OPTIONAL {?uri rdfs:label ?label. }. OPTIONAL {?uri locn:geometry ?geometry . }. OPTIONAL {?geometry schema:polygon ?geometry_polygon. }. } LIMIT 100';
         var endpoint = 'http://opendata.caceres.es/sparql';
-        xmlhttpRequest.onreadystatechange = function () {
-            if (xmlhttpRequest.status != 200 ||
-                xmlhttpRequest.readyState != XMLHttpRequest.DONE) return;
-            var bindings = JSON.parse(xmlhttpRequest.responseText).results.bindings;
-            this.loadDataComplete_(bindings);
-        }.bind(this);
-        xmlhttpRequest.open(
-            'GET', endpoint + '?query=' + query + '&format=json',
-            //'GET', 'https://storage.googleapis.com/mapsdevsite/json/puzzle.json',
-            true);
-        xmlhttpRequest.send(null);
+        var instance = this;
+        $.getJSON( endpoint + '?query=' + query + '&format=json&callback=?', function(data) {
+            var bindings = data.results.bindings;
+            instance.loadDataComplete_(bindings);
+        });
     };
 
 
