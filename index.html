@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.0.1/dist/leaflet.js"></script>
+    <style type="text/css">
+
+        #map {
+            height: 100%;
+        }
+
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<!--<div style="left: 50%; position: absolute; bottom: 30px;">
+    <button onclick="window.location='puzzle.html'">Comenzar Juego</button>
+</div>-->
+<script type="text/javascript">
+    var selectedMap = "callejero:Callejero_Caceres";
+    var  map=L.map('map').setView(["39.474854", "-6.371830"], 13);
+    var lcontrol = {};
+    var wmsLayer = {};
+    function setLayer(){
+        wmsLayer = L.tileLayer.wms('http://ide.caceres.es/geoserver/ows?', {
+            layers: selectedMap,
+            transparent: true,
+            attribution: ""
+        });
+        map.addLayer(wmsLayer);
+    }
+
+    lcontrol = L.control({position: 'topleft'});
+    lcontrol.onAdd = function (map) {
+        var menuDiv = document.createElement('div');
+        menuDiv.style.cssText =
+            'position: absolute;top: 50%;margin: 40px 10px; border-radius: 8px; height: 160px; width: 200px;' +
+            'background-color: white; font-size: 14px; font-family: Roboto; border: solid 1px black;' +
+            'text-align: center; color: grey;line-height: 32px; overflow: hidden';
+        var titleDiv = document.createElement('div');
+        titleDiv.style.cssText =
+            'width: 100%; background: #1d70a3; color: white; font-size: 20px;' +
+            'line-height: 40px;margin-bottom: 24px';
+        titleDiv.innerText = 'Elige tu mapa';
+        var difficultySelect = document.createElement('select');
+        var option = document.createElement('option');
+        option.value = 'callejero:Callejero_Caceres';
+        option.innerText = 'Actual';
+        difficultySelect.appendChild(option);
+        ['2012', '2006', '1996', '1986', '1975', '1973', '1956', '1947','1931', '1900', '1853', '1813'].forEach(function (level) {
+            var option = document.createElement('option');
+            option.value = 'evolucion_ciudad_monumental:' + level.toLowerCase();
+            option.innerText = level;
+            difficultySelect.appendChild(option);
+        });
+        difficultySelect.style.cssText =
+            'border: 2px solid lightgrey; background-color: white; color: #1d70a3;' +
+            'padding: 10px 24px; font-size: 14px;';
+        difficultySelect.onchange = function () {
+            wmsLayer.remove();
+            selectedMap=difficultySelect.value;
+            setLayer();
+        }.bind(this);
+        menuDiv.appendChild(titleDiv);
+        menuDiv.appendChild(difficultySelect);
+        setLayer();
+        var button = document.createElement('button');
+        button.innerText = "Comenzar juego";
+        button.style.cssText = "border-radius: 8px; margin-top: 10px;background-color: #1d70a3; border: none;color: white;padding: 10px 24px;text-align: center;text-decoration: none;display: inline-block;font-size: 14px;cursor: pointer;";
+        button.onclick = function () {
+            window.location='puzzle.html';
+        };
+        menuDiv.appendChild(button);
+        return menuDiv;
+    };
+    lcontrol.addTo(map);
+
+    function loadDistricts() {
+        var xmlhttpRequest = new XMLHttpRequest;
+        var query = 'select+*+where%7B%7Bselect+*+where%7B%0D%0A%3Furi+a+om%3ABarrio.%0D%0A%3Furi+rdfs%3Alabel+%3Flabel.%0D%0Aoptional%7Bselect+distinct+%3Fu+%3Fc+%3Fa+%3Fn+where+%7B%0D%0Aservice+%3Chttp%3A%2F%2Fes.dbpedia.org%2Fsparql%3E%7B%0D%0A%3Fu+rdfs%3Alabel+%22Barrios+de+Cáceres%22%40es.%0D%0A%3Fc+%3Fb+%3Fu+.%0D%0A%3Fc+dbpedia-owl%3Aabstract+%3Fa.%0D%0A%3Fc+rdfs%3Alabel+%3Fn%0D%0A%7D%0D%0A%7D%0D%0A%0D%0A%7D%0D%0AOPTIONAL+%7B%3Furi+locn%3Ageometry+%3Fgeometry+.+%7D.+%0D%0AOPTIONAL+%7B%3Fgeometry+schema%3Apolygon+%3Fgeometry_polygon.+%7D%0D%0Afilter+regex%28%3Fn%2C%3Flabel%2C%22i%22%29%7D%7Dunion%7B%0D%0Aselect+*+where%7B%0D%0A%3Furi+a+om%3ABarrio.%0D%0A%3Furi+rdfs%3Alabel+%3Flabel.%0D%0AOPTIONAL+%7B%3Furi+locn%3Ageometry+%3Fgeometry+.+%7D.+%0D%0AOPTIONAL+%7B%3Fgeometry+schema%3Apolygon+%3Fgeometry_polygon.+%7D%7D%7D%7D';
+        var endpoint = 'http://opendata.caceres.es/sparql';
+        xmlhttpRequest.onreadystatechange = function () {
+            if (xmlhttpRequest.status != 200 ||
+                xmlhttpRequest.readyState != XMLHttpRequest.DONE) return;
+            var bindings = JSON.parse(xmlhttpRequest.responseText).results.bindings;
+            printDistricts(bindings);
+        }.bind(this);
+        xmlhttpRequest.open(
+            'GET', endpoint + '?query=' + query + '&format=json',
+            true);
+        xmlhttpRequest.send(null);
+    }
+    loadDistricts();
+
+    function printDistricts(data){
+        labels = [];
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].label.value !== "Valdesalor" && data[i].label.value !== "Estación Arroyo-Malpartida" && !labels.includes(data[i].label.value)) {
+                var array = JSON.parse(data[i].geometry_polygon.value)[0];
+                var bounds = [];
+                for (var j = 0; j < array.length; j++) {
+                    bounds.push({lat: array[j][1], lng: array[j][0]});
+                }
+                //var latlngs = [[37, -109.05],[41, -109.03],[41, -102.05],[37, -102.04]];
+                if(data[i].a===undefined)
+                    L.polygon(bounds, {color: 'grey', opacity: 0.5}).bindPopup("<b>" + data[i].label.value + "</b><br>").addTo(map);
+                else
+                    L.polygon(bounds, {color: 'blue', opacity: 0.5}).bindPopup("<b>" + data[i].label.value + "</b><br>" + data[i].a.value).addTo(map);
+            labels.push(data[i].label.value);
+            }
+        }
+    }
+</script>
+</body>
+</html>
